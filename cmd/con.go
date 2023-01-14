@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"os/user"
@@ -23,15 +24,10 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		// host := "localhost"
-		// port := "22"
-		// user := "test-user"
 		cuser, err := user.Current()
 		if err != nil {
 			fmt.Println(err)
 		}
-		// pass := "Zaq12wsx"
 
 		sshHost, _ := cmd.Flags().GetString("host")
 		sshPort, _ := cmd.Flags().GetString("port")
@@ -40,28 +36,34 @@ to quickly create a Cobra application.`,
 		if sshUser == "" {
 			sshUser = cuser.Username
 		}
-		sshPass, _ := cmd.Flags().GetString("password")
-		if sshPass == "" {
-			sshPass = ""
+		// sshPass, _ := cmd.Flags().GetString("password")
+		sshKey, _ := cmd.Flags().GetString("file")
+		if sshKey == "" {
+			fmt.Println("Please set key file path")
 		}
 
-		// Create sshClientConfig
+		key, err := os.ReadFile(sshKey)
+		if err != nil {
+			log.Fatalf("unable to read private key: %v", err)
+		}
+
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			log.Fatalf("unable to parse private key: %v", err)
+		}
+
 		sshConfig := &ssh.ClientConfig{
 			User: sshUser,
 			Auth: []ssh.AuthMethod{
-				ssh.Password(sshPass),
+				ssh.PublicKeys(signer),
 			},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		}
 
-		// SSH connect.
 		client, err := ssh.Dial("tcp", sshHost+":"+sshPort, sshConfig)
-
-		// Create Session
 		session, err := client.NewSession()
 		defer session.Close()
 
-		// キー入力を接続先が認識できる形式に変換する(ここがキモ)
 		fd := int(os.Stdin.Fd())
 		state, err := terminal.MakeRaw(fd)
 		if err != nil {
@@ -69,7 +71,6 @@ to quickly create a Cobra application.`,
 		}
 		defer terminal.Restore(fd, state)
 
-		// ターミナルサイズの取得
 		w, h, err := terminal.GetSize(fd)
 		if err != nil {
 			fmt.Println(err)
@@ -125,4 +126,5 @@ func init() {
 	conCmd.Flags().StringP("port", "p", "22", "SSH Server Port")
 	conCmd.Flags().StringP("login", "L", "", "SSH Server User")
 	conCmd.Flags().StringP("password", "P", "", "SSH Server Password")
+	conCmd.Flags().StringP("file", "f", "", "SSH Server Key File Path")
 }
