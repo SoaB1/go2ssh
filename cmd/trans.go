@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 
@@ -29,11 +30,7 @@ to quickly create a Cobra application.`,
 			fmt.Println(err)
 		}
 
-		srcpath, err := cmd.Flags().GetString("src")
-		if err != nil {
-			fmt.Println(err)
-		}
-		dstpath, err := cmd.Flags().GetString("dst")
+		csv, err := cmd.Flags().GetString("csv")
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -49,46 +46,59 @@ to quickly create a Cobra application.`,
 		if sshKey == "" {
 			sshKey = cuser.HomeDir + "/.ssh/id_rsa"
 		}
-
-		key, err := os.ReadFile(sshKey)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		signer, err := ssh.ParsePrivateKey(key)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		sshConfig := &ssh.ClientConfig{
-			User: sshUser,
-			Auth: []ssh.AuthMethod{
-				ssh.PublicKeys(signer),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-
-		sshConfig.SetDefaults()
-		sshConnection, err := ssh.Dial("tcp", sshHost+":"+sshPort, sshConfig)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer sshConnection.Close()
-
-		sftpClient, err := sftp.NewClient(sshConnection)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer sftpClient.Close()
+		copyFile(sshUser, sshKey, sshHost, sshPort, csv)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(transCmd)
 
+	transCmd.Flags().StringP("host", "H", "localhost", "SSH Host")
+	transCmd.Flags().StringP("port", "P", "22", "SSH Port")
+	transCmd.Flags().StringP("login", "l", "", "SSH Login")
+	transCmd.Flags().StringP("identity", "i", "", "SSH Identity File")
+	transCmd.Flags().StringP("csv", "f", "", "CSV File")
+
 }
 
-func conSSH(sshUser, sshKey, sshHost, sshPort string) {
+func copyFile(sshUser, sshKey, sshHost, sshPort, csv string) {
+	// Parse CSV
+	f, err := os.Open(csv)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	r := csv.NewReader(f)
+	r.Comma = ','
+	r.Comment = '#'
+	r.FieldsPerRecord = 3
+	r.TrimLeadingSpace = true
+	r.ReuseRecord = true
+
+	// Skip header
+	_, err = r.Read()
+	if err == io.EOF {
+		fmt.Println("No records found")
+	}
+
+	srcFile := []string{}
+	dstFile := []string{}
+	filePerm := []string{}
+
+	// Read records
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
+		srcFile = append(srcFile, record[0])
+		dstFile = append(dstFile, record[1])
+		filePerm = append(filePerm, record[2])
+	}
+
 	key, err := os.ReadFile(sshKey)
 	if err != nil {
 		fmt.Println(err)
@@ -118,4 +128,24 @@ func conSSH(sshUser, sshKey, sshHost, sshPort string) {
 		fmt.Println(err)
 	}
 	defer sftpClient.Close()
+
+	for i := range srcFile {
+		destFile, err := sftpClient.Create(dstFile[i])
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer destFile.Close()
+
+		srcFile, err := os.Open(srcFile[i])
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer srcFile.Close()
+
+		bytes, err := io.Copy(destFile, srcFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("%d bytes copied\n", bytes)
+	}
 }
