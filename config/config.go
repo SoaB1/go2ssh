@@ -11,7 +11,6 @@ type sshConfig struct {
 	Hostname string `env:"USER" envDefault:"localhost"`
 	Server   string `env:"PASSWORD" envDefault:"localhost"`
 	Port     string `env:"PORT" envDefault:"22"`
-	User     string `env:"USER" envDefault:""`
-	Name     string `env:"NAME" envDefault:"root"`
-	Keypath  string `env:"KEY-PATH" envDefault:"$HOME/.ssh/id_rsa"`
+	UserName string `env:"NAME" envDefault:"root"`
+	KeyPath  string `env:"KEY-PATH" envDefault:"$HOME/.ssh/id_rsa"`
 }
