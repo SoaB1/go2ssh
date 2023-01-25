@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"go2ssh/config"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,19 +13,6 @@ import (
 )
 
 var cfgFile string
-
-type Config struct {
-	SSHConfigs string
-}
-
-type SSHConfig struct {
-	Host     string
-	Hostname string
-	Server   string
-	Port     string
-	User     string
-	Key      string
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -85,5 +73,10 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+
+	if err := viper.Unmarshal(&config.Conf); err != nil {
+		fmt.Fprintln(os.Stderr, "Error unmarshalling config file:", err)
+		os.Exit(1)
 	}
 }
