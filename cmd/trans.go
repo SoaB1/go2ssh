@@ -34,7 +34,95 @@ to quickly create a Cobra application.`,
 			fmt.Println(err)
 		}
 
-		copyFile(cfgs.UserName, cfgs.KeyPath, cfgs.Server, cfgs.Port, csv)
+		f, err := os.Open(csv)
+		if err != nil {
+			fmt.Println(err)
+		}
+		r := csvReader(f)
+		r.Comma = ','
+		r.Comment = '#'
+		r.FieldsPerRecord = 3
+		r.TrimLeadingSpace = true
+		r.ReuseRecord = true
+
+		// Skip header
+		_, err = r.Read()
+		if err == io.EOF {
+			fmt.Println("No records found")
+		}
+
+		srcFile := []string{}
+		dstFile := []string{}
+		// filePerm := []string{}
+
+		// Read records
+		for {
+			record, err := r.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				fmt.Println(err)
+			}
+			srcFile = append(srcFile, record[0])
+			dstFile = append(dstFile, record[1])
+			// filePerm = append(filePerm, record[2])
+		}
+
+		key, err := os.ReadFile(cfgs.KeyPath)
+		if err != nil {
+			fmt.Println(err)
+		}
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Set SSH Config
+		sshConfig := &ssh.ClientConfig{
+			User: cfgs.UserName,
+			Auth: []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+
+		// Connect to SSH Server
+		sshConfig.SetDefaults()
+		sshConnection, err := ssh.Dial("tcp", cfgs.Server+":"+cfgs.Port, sshConfig)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer sshConnection.Close()
+
+		// Create SFTP Client
+		sftpClient, err := sftp.NewClient(sshConnection)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer sftpClient.Close()
+
+		// Copy files
+		for i, v := range srcFile {
+			src, err := os.Open(v)
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer src.Close()
+
+			dst, err := sftpClient.Create(dstFile[i])
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer dst.Close()
+
+			bytes, err := io.Copy(dst, src)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Printf("%d bytes copied\n", bytes)
+		}
+
 	},
 }
 
@@ -43,93 +131,4 @@ func init() {
 
 	transCmd.Flags().StringP("csv", "f", "", "CSV File")
 
-}
-
-func copyFile(sshUser, sshKey, sshHost, sshPort, csv string) {
-	// Parse CSV
-	f, err := os.Open(csv)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	r := csvReader(f)
-	r.Comma = ','
-	r.Comment = '#'
-	r.FieldsPerRecord = 3
-	r.TrimLeadingSpace = true
-	r.ReuseRecord = true
-
-	// Skip header
-	_, err = r.Read()
-	if err == io.EOF {
-		fmt.Println("No records found")
-	}
-
-	srcFile := []string{}
-	dstFile := []string{}
-	// filePerm := []string{}
-
-	// Read records
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			fmt.Println(err)
-		}
-		srcFile = append(srcFile, record[0])
-		dstFile = append(dstFile, record[1])
-		// filePerm = append(filePerm, record[2])
-	}
-
-	key, err := os.ReadFile(sshKey)
-	if err != nil {
-		fmt.Println(err)
-	}
-	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	sshConfig := &ssh.ClientConfig{
-		User: sshUser,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	sshConfig.SetDefaults()
-	sshConnection, err := ssh.Dial("tcp", sshHost+":"+sshPort, sshConfig)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer sshConnection.Close()
-
-	sftpClient, err := sftp.NewClient(sshConnection)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer sftpClient.Close()
-
-	for i := range srcFile {
-		destFile, err := sftpClient.Create(dstFile[i])
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer destFile.Close()
-
-		srcFile, err := os.Open(srcFile[i])
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer srcFile.Close()
-
-		bytes, err := io.Copy(destFile, srcFile)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Printf("%d bytes copied\n", bytes)
-	}
 }
