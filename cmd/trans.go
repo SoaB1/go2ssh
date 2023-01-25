@@ -4,15 +4,18 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/csv"
 	"fmt"
+	"go2ssh/config"
 	"io"
 	"os"
-	"os/user"
 
 	"github.com/pkg/sftp"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 )
+
+var csvReader = csv.NewReader
 
 // transCmd represents the trans command
 var transCmd = &cobra.Command{
@@ -25,38 +28,19 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cuser, err := user.Current()
-		if err != nil {
-			fmt.Println(err)
-		}
-
+		cfgs := config.Conf.SSHConfigs
 		csv, err := cmd.Flags().GetString("csv")
 		if err != nil {
 			fmt.Println(err)
 		}
 
-		sshHost, _ := cmd.Flags().GetString("host")
-		sshPort, _ := cmd.Flags().GetString("port")
-
-		sshUser, _ := cmd.Flags().GetString("login")
-		if sshUser == "" {
-			sshUser = cuser.Username
-		}
-		sshKey, _ := cmd.Flags().GetString("key")
-		if sshKey == "" {
-			sshKey = cuser.HomeDir + "/.ssh/id_rsa"
-		}
-		copyFile(sshUser, sshKey, sshHost, sshPort, csv)
+		copyFile(cfgs.UserName, cfgs.KeyPath, cfgs.Server, cfgs.Port, csv)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(transCmd)
 
-	transCmd.Flags().StringP("host", "H", "localhost", "SSH Host")
-	transCmd.Flags().StringP("port", "P", "22", "SSH Port")
-	transCmd.Flags().StringP("login", "l", "", "SSH Login")
-	transCmd.Flags().StringP("identity", "i", "", "SSH Identity File")
 	transCmd.Flags().StringP("csv", "f", "", "CSV File")
 
 }
@@ -68,7 +52,7 @@ func copyFile(sshUser, sshKey, sshHost, sshPort, csv string) {
 		fmt.Println(err)
 	}
 
-	r := csv.NewReader(f)
+	r := csvReader(f)
 	r.Comma = ','
 	r.Comment = '#'
 	r.FieldsPerRecord = 3
@@ -83,7 +67,7 @@ func copyFile(sshUser, sshKey, sshHost, sshPort, csv string) {
 
 	srcFile := []string{}
 	dstFile := []string{}
-	filePerm := []string{}
+	// filePerm := []string{}
 
 	// Read records
 	for {
@@ -96,7 +80,7 @@ func copyFile(sshUser, sshKey, sshHost, sshPort, csv string) {
 		}
 		srcFile = append(srcFile, record[0])
 		dstFile = append(dstFile, record[1])
-		filePerm = append(filePerm, record[2])
+		// filePerm = append(filePerm, record[2])
 	}
 
 	key, err := os.ReadFile(sshKey)
