@@ -53,7 +53,7 @@ to quickly create a Cobra application.`,
 
 		srcFile := []string{}
 		dstFile := []string{}
-		// filePerm := []string{}
+		filePerm := []string{}
 
 		// Read records
 		for {
@@ -66,7 +66,7 @@ to quickly create a Cobra application.`,
 			}
 			srcFile = append(srcFile, record[0])
 			dstFile = append(dstFile, record[1])
-			// filePerm = append(filePerm, record[2])
+			filePerm = append(filePerm, record[2])
 		}
 
 		key, err := os.ReadFile(cfgs.KeyPath)
@@ -118,6 +118,13 @@ to quickly create a Cobra application.`,
 
 			bytes, err := io.Copy(dst, src)
 			if err != nil {
+				fmt.Println(err)
+			}
+			s, err := sshConnection.NewSession()
+			if err != nil {
+				fmt.Println(err)
+			}
+			if err := s.Run("chmod " + filePerm[i] + " " + dstFile[i]); err != nil {
 				fmt.Println(err)
 			}
 			fmt.Printf("%d bytes copied\n", bytes)
