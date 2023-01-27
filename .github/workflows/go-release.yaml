@@ -2,13 +2,8 @@ name: Package Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-    paths:
-      - ".github/workflows/go-release.yaml"
-      - ".goreleaser.yaml"
 
 jobs:
   goreleaser:
