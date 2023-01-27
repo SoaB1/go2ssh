@@ -1,0 +1,33 @@
+name: Package Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "20.*.*"
+    paths:
+      ".github/workflows/go-release.yaml"
+      ".goreleaser.yaml"
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
