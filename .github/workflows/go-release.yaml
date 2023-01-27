@@ -7,8 +7,8 @@ on:
     tags:
       - "20.*.*"
     paths:
-      ".github/workflows/go-release.yaml"
-      ".goreleaser.yaml"
+      - ".github/workflows/go-release.yaml"
+      - ".goreleaser.yaml"
 
 jobs:
   goreleaser:
