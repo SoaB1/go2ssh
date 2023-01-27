@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"go2ssh/config"
 	"os"
 	"os/signal"
 	"os/user"
@@ -12,56 +13,64 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// conCmd represents the con command
-var conCmd = &cobra.Command{
-	Use:   "con",
-	Short: "A Connet to SSH Server",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+// connectCmd represents the connect command
+var connectCmd = &cobra.Command{
+	Use:   "connect",
+	Short: "Connet to SSH Server",
+	Long: `Connet to SSH Server
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Example:
+  # Connect to SSH Server
+  go2ssh connect
+
+  # Connect to SSH Server,Using a non-default configuration file
+  go2ssh connect --config /path/to/config.yaml
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		// host := "localhost"
-		// port := "22"
-		// user := "test-user"
+		cfgs := config.Conf.SSHConfigs
 		cuser, err := user.Current()
 		if err != nil {
 			fmt.Println(err)
 		}
-		// pass := "Zaq12wsx"
 
-		sshHost, _ := cmd.Flags().GetString("host")
-		sshPort, _ := cmd.Flags().GetString("port")
-
-		sshUser, _ := cmd.Flags().GetString("login")
+		sshUser := cfgs.UserName
 		if sshUser == "" {
 			sshUser = cuser.Username
 		}
-		sshPass, _ := cmd.Flags().GetString("password")
-		if sshPass == "" {
-			sshPass = ""
+
+		sshKey := cfgs.KeyPath
+		if sshKey == "" {
+			fmt.Println("Please set key file path")
 		}
 
-		// Create sshClientConfig
+		key, err := os.ReadFile(sshKey)
+		if err != nil {
+			fmt.Printf("unable to read private key: %v", err)
+		}
+
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			fmt.Printf("unable to parse private key: %v", err)
+		}
+
 		sshConfig := &ssh.ClientConfig{
 			User: sshUser,
 			Auth: []ssh.AuthMethod{
-				ssh.Password(sshPass),
+				ssh.PublicKeys(signer),
 			},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		}
 
-		// SSH connect.
-		client, err := ssh.Dial("tcp", sshHost+":"+sshPort, sshConfig)
-
-		// Create Session
+		client, err := ssh.Dial("tcp", cfgs.Server+":"+cfgs.Port, sshConfig)
+		if err != nil {
+			fmt.Printf("unable to connect: %v", err)
+		}
 		session, err := client.NewSession()
+		if err != nil {
+			fmt.Printf("unable to create session: %v", err)
+		}
 		defer session.Close()
 
-		// キー入力を接続先が認識できる形式に変換する(ここがキモ)
 		fd := int(os.Stdin.Fd())
 		state, err := terminal.MakeRaw(fd)
 		if err != nil {
@@ -69,7 +78,6 @@ to quickly create a Cobra application.`,
 		}
 		defer terminal.Restore(fd, state)
 
-		// ターミナルサイズの取得
 		w, h, err := terminal.GetSize(fd)
 		if err != nil {
 			fmt.Println(err)
@@ -95,7 +103,6 @@ to quickly create a Cobra application.`,
 			fmt.Println(err)
 		}
 
-		// ターミナルサイズの変更検知・処理
 		signal_chan := make(chan os.Signal, 1)
 		signal.Notify(signal_chan, syscall.SIGWINCH)
 		go func() {
@@ -118,11 +125,5 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(conCmd)
-
-	conCmd.Flags().StringP("host", "H", "localhost", "SSH Server Host")
-	// conCmd.Flags().IntP("port", "p", 22, "SSH Server Port")
-	conCmd.Flags().StringP("port", "p", "22", "SSH Server Port")
-	conCmd.Flags().StringP("login", "L", "", "SSH Server User")
-	conCmd.Flags().StringP("password", "P", "", "SSH Server Password")
+	rootCmd.AddCommand(connectCmd)
 }
