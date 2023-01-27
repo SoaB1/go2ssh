@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - "20*.*.*"
+      - "v*"
     paths:
       - ".github/workflows/go-release.yaml"
       - ".goreleaser.yaml"
