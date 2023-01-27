@@ -20,13 +20,30 @@ var csvReader = csv.NewReader
 // transCmd represents the trans command
 var transCmd = &cobra.Command{
 	Use:   "trans",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Transfer file to SFTP Server",
+	Long: `Transfer file to SFTP Server using a CSV file.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Example:
+  # Transfer file to SFTP Server using a CSV file
+  go2ssh trans -f /path/to/file.csv
+
+  # Transfer file to SFTP Server using a CSV file,Using a non-default configuration file
+  go2ssh trans -f /path/to/file.csv --config /path/to/config.yaml
+
+# CSV file format has need 3 columns.
+# Column 1: Source file path
+# Column 2: Destination file path
+# Column 3: File permission
+# Permission must be expressed in octal(3 digits) 
+# docs: https://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation
+
+CSV file format:
+Column1,Column2,Column3
+# Server1 to Server2 (Commnet line are skipped)
+/home/user1/server1_file.txt,/home/user2/server2_file1.txt,644
+/home/user1/server1_file.txt,/home/user2/server2_file2.txt,644
+
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfgs := config.Conf.SSHConfigs
 		csv, err := cmd.Flags().GetString("csv")
