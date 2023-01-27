@@ -1,8 +1,6 @@
 test/
 .old/
 
-go.mod
-go.sum
 cmd/test.go
 .gitignore
 
