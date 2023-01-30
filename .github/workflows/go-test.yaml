@@ -7,3 +7,47 @@ on:
 jobs:
   go-test:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: action/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: codecov/codecov-action@v3
+      
+      - name: Set up tools
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+
+  go-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: action/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: build
+        run: go build
+
+  go-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: action/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: lint
+        uses: golangci/golangci-lint-action@v3
