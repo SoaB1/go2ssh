@@ -6,7 +6,7 @@ Use SFTP and SSH protocols to manipulate files to the server.
 
 - [Installation](#Installation)
 - [Getting Start](#Getting-Started)
-- [Commands](Commands)
+- [Commands](#commands)
 
 
 ## Installation
