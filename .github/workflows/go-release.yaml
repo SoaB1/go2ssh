@@ -10,22 +10,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: post-summary
-        uses: actions/github-script@v6
-        with:
-          script: |
-            parametersTable = [
-              [{ data: 'key', header: true}, { data: 'value', header: true }],
-              ['branch', '${{ github.ref_name }}']
-            ]
-            retryCommand = `gh workflow run --ref ${{ github.ref_name }} '${{ github.workflow }}'`
-            
-            await core.summary
-              .addRaw("### RUN SUMMARY\n")
-              .addTable(parametersTable)
-              .addRaw("\n### RETRY COMMAND\n")
-              .addCodeBlock(retryCommand)
-              .write()
+        uses: ./.github/actions/post-summary
 
       - name: Checkout
         uses: actions/checkout@v3
