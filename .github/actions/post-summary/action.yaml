@@ -1,0 +1,21 @@
+name: post-summary
+description: ""
+
+jobs:
+  using: composite
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            parametersTable = [
+              [{ data: 'key', header: true}, { data: 'value', header: true }],
+              ['branch', '${{ github.ref_name }}']
+            ]
+            retryCommand = `gh workflow run --ref ${{ github.ref_name }} '${{ github.workflow }}'`
+            
+            await core.summary
+              .addRaw("### RUN SUMMARY\n")
+              .addTable(parametersTable)
+              .addRaw("\n### RETRY COMMAND\n")
+              .addCodeBlock(retryCommand)
+              .write()
