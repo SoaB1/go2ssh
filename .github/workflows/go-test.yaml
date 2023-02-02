@@ -53,3 +53,6 @@ jobs:
 
       - name: lint
         uses: golangci/golangci-lint-action@v3
+        with:
+          skip-pkg-cache: true
+          skip-build-cache: true
