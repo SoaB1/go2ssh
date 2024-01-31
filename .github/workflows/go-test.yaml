@@ -19,7 +19,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
       
       - name: Set up tools
         run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
