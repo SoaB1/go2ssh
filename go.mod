@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/pkg/sftp v1.13.5
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.15.0
 	golang.org/x/crypto v0.4.0
 )
